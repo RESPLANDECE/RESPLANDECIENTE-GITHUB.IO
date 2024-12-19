@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reserva de Asientos - El Legado</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background-image: url('fondo.jpg'); /* Archivo de imagen */
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+            color: white;
+        }
+        h1 {
+            text-align: center;
+            color: #f4f4f9;
+            margin-top: 20px;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        .seating {
+            display: grid;
+            grid-template-columns: repeat(6, 50px);
+            gap: 10px;
+            justify-content: center;
+            margin: 20px 0;
+        }
+        .seat {
+            width: 50px;
+            height: 50px;
+            background-color: #4caf50;
+            color: white;
+            text-align: center;
+            line-height: 50px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .seat.taken {
+            background-color: #d32f2f;
+            cursor: not-allowed;
+        }
+        .seat.selected {
+            background-color: #ff9800;
+        }
+        button {
+            display: block;
+            margin: 10px auto;
+            padding: 10px 20px;
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        form {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        input {
+            padding: 10px;
+            margin: 5px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        #download-section {
+            text-align: center;
+            margin-top: 20px;
+        }
+        #login-form {
+            display: none;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Reserva tu Asiento - El Legado</h1>
+    <div class="container">
+        <form id="reservation-form">
+            <input type="text" id="first-name" placeholder="Nombre" required>
+            <input type="text" id="last-name" placeholder="Apellido" required>
+            <button type="submit" id="reserve-btn" disabled>Reservar Asiento</button>
+        </form>
+        <p>Selecciona tu asiento haciendo clic en el plano:</p>
+        <div class="seating" id="seating"></div>
+        <p id="selected-seat">Asiento seleccionado: <strong>Ninguno</strong></p>
+
+        <div id="download-section">
+            <button id="show-login-btn">Descargar Lista de Reservas</button>
+            <form id="login-form">
+                <input type="text" id="username" placeholder="Usuario" required>
+                <input type="password" id="password" placeholder="Contraseña" required>
+                <button type="submit">Ingresar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const seatingContainer = document.getElementById('seating');
+        const selectedSeatDisplay = document.getElementById('selected-seat');
+        const reserveButton = document.getElementById('reserve-btn');
+        const form = document.getElementById('reservation-form');
+        const firstNameInput = document.getElementById('first-name');
+        const lastNameInput = document.getElementById('last-name');
+        const downloadSection = document.getElementById('download-section');
+        const showLoginButton = document.getElementById('show-login-btn');
+        const loginForm = document.getElementById('login-form');
+        const usernameInput = document.getElementById('username');
+        const passwordInput = document.getElementById('password');
+
+        // Generar 50 asientos (6 columnas)
+        const seats = [];
+        for (let row = 1; row <= 9; row++) {
+            for (let col = 1; col <= 6; col++) {
+                if (seats.length < 50) {
+                    seats.push({ id: `F${row}C${col}`, status: 'free', reservedBy: null });
+                }
+            }
+        }
+
+        let selectedSeat = null;
+
+        function renderSeating() {
+            seatingContainer.innerHTML = '';
+            seats.forEach(seat => {
+                const seatDiv = document.createElement('div');
+                seatDiv.classList.add('seat');
+                if (seat.status === 'taken') seatDiv.classList.add('taken');
+                if (seat.id === selectedSeat) seatDiv.classList.add('selected');
+                seatDiv.textContent = seat.id;
+
+                seatDiv.addEventListener('click', () => {
+                    if (seat.status === 'free') {
+                        selectedSeat = seat.id === selectedSeat ? null : seat.id;
+                        updateUI();
+                    }
+                });
+
+                seatingContainer.appendChild(seatDiv);
+            });
+        }
+
+        function updateUI() {
+            renderSeating();
+            selectedSeatDisplay.querySelector('strong').textContent = selectedSeat || 'Ninguno';
+            reserveButton.disabled = !selectedSeat;
+        }
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            if (selectedSeat) {
+                const seat = seats.find(s => s.id === selectedSeat);
+                seat.status = 'taken';
+                seat.reservedBy = `${firstNameInput.value} ${lastNameInput.value}`;
+                selectedSeat = null;
+                firstNameInput.value = '';
+                lastNameInput.value = '';
+                updateUI();
+                alert(`Asiento reservado con éxito para ${seat.reservedBy}.`);
+            }
+        });
+
+        showLoginButton.addEventListener('click', () => {
+            loginForm.style.display = 'block';
+        });
+
+        loginForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const username = usernameInput.value;
+            const password = passwordInput.value;
+
+            if (username === 'conectados' && password === 'conectados') {
+                const reservedSeats = seats.filter(seat => seat.status === 'taken');
+                const csvContent = reservedSeats.map(seat => `${seat.id},${seat.reservedBy}`).join('\n');
+                const blob = new Blob([`Asiento,Reservado Por\n${csvContent}`], { type: 'text/csv' });
+                const url = URL.createObjectURL(blob);
+
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'reservas.csv';
+                a.click();
+                URL.revokeObjectURL(url);
+
+                alert('Lista descargada exitosamente.');
+                loginForm.style.display = 'none';
+                usernameInput.value = '';
+                passwordInput.value = '';
+            } else {
+                alert('Usuario o contraseña incorrectos.');
+            }
+        });
+
+        // Inicializar la interfaz
+        renderSeating();
+    </script>
+</body>
+</html>
